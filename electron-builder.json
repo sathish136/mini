@@ -1,0 +1,15 @@
+{
+  "productName": "MOF Attendance Management System",
+  "appId": "com.mof.attendance",
+  "directories": {
+    "output": "dist"
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "client/public/favicon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}
