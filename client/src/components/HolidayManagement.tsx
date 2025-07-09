@@ -24,9 +24,7 @@ export default function HolidayManagement() {
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [filterType, setFilterType] = useState("all");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [quickAddDate, setQuickAddDate] = useState("");
-  const [quickAddName, setQuickAddName] = useState("");
-  const [quickAddType, setQuickAddType] = useState("annual");
+
   const [weekendDays, setWeekendDays] = useState<string[]>(["saturday", "sunday"]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -142,34 +140,7 @@ export default function HolidayManagement() {
     },
   });
 
-  const handleQuickAdd = () => {
-    if (!quickAddDate || !quickAddName) {
-      toast({
-        title: "Error",
-        description: "Please fill in both date and name",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    const holidayData: InsertHoliday = {
-      name: quickAddName,
-      date: new Date(quickAddDate),
-      type: quickAddType as "annual" | "special" | "weekend",
-      description: quickAddName,
-      isRecurring: false,
-      applicableGroups: ["group_a", "group_b"],
-      year: new Date(quickAddDate).getFullYear(),
-      isActive: true,
-    };
-
-    createHolidayMutation.mutate(holidayData);
-    
-    // Reset form
-    setQuickAddDate("");
-    setQuickAddName("");
-    setQuickAddType("annual");
-  };
 
   const deleteHolidayMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -772,60 +743,7 @@ export default function HolidayManagement() {
 
       </div>
 
-      {/* Quick Add Holiday Form */}
-      <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-semibold text-blue-900 flex items-center">
-            <Plus className="w-5 h-5 mr-2" />
-            Quick Add Holiday
-          </CardTitle>
-          <p className="text-sm text-blue-700">Add new holidays quickly using the form below</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Date</label>
-              <Input 
-                type="date" 
-                value={quickAddDate}
-                onChange={(e) => setQuickAddDate(e.target.value)}
-                className="border-blue-200 focus:border-blue-400"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Holiday Name</label>
-              <Input 
-                placeholder="Enter holiday name" 
-                value={quickAddName}
-                onChange={(e) => setQuickAddName(e.target.value)}
-                className="border-blue-200 focus:border-blue-400"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Type</label>
-              <Select value={quickAddType} onValueChange={setQuickAddType}>
-                <SelectTrigger className="border-blue-200 focus:border-blue-400">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="annual">Annual Holiday</SelectItem>
-                  <SelectItem value="special">Special Holiday</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Action</label>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                onClick={handleQuickAdd}
-                disabled={createHolidayMutation.isPending}
-              >
-                {createHolidayMutation.isPending ? "Adding..." : "Add Holiday"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Holiday List */}
       <Card className="border border-gray-200">
@@ -881,14 +799,7 @@ export default function HolidayManagement() {
                           {holiday.type === "annual" ? "Annual" : "Special"}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {new Date(holiday.date).toLocaleDateString('en-GB', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </p>
+
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -924,15 +835,12 @@ export default function HolidayManagement() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-medium text-gray-900">No Holidays Added Yet</h3>
                   <p className="text-sm text-gray-500 max-w-sm">
-                    Get started by adding your first holiday using the quick add form above.
+                    Get started by adding your first holiday using the Add Holiday button above.
                   </p>
                 </div>
                 <Button 
                   className="bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    setQuickAddDate(new Date().toISOString().split('T')[0]);
-                    setQuickAddName("");
-                  }}
+                  onClick={() => setIsDialogOpen(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Holiday
