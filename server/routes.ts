@@ -2946,6 +2946,130 @@ function isGovernmentHoliday(date: Date): boolean {
   return holidays.includes(dateString);
 }
 
+// Leave Balance API Endpoints
+router.get('/api/leave-balances', async (req, res) => {
+  try {
+    const { employeeId, year } = req.query;
+    let query = sql`
+      SELECT 
+        lb.employee_id,
+        e.full_name,
+        e.employee_id as emp_id,
+        lb.year,
+        lb.annual_entitlement,
+        lb.used_days,
+        lb.remaining_days,
+        lb.created_at,
+        lb.updated_at
+      FROM leave_balances lb
+      JOIN employees e ON lb.employee_id = e.id
+    `;
+    
+    const conditions = [];
+    if (employeeId) {
+      conditions.push(sql`lb.employee_id = ${employeeId}`);
+    }
+    if (year) {
+      conditions.push(sql`lb.year = ${year}`);
+    }
+    
+    if (conditions.length > 0) {
+      query = sql`${query} WHERE ${sql.join(conditions, sql` AND `)}`;
+    }
+    
+    query = sql`${query} ORDER BY lb.year DESC, e.full_name ASC`;
+    
+    const result = await db.execute(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Failed to fetch leave balances:', error);
+    res.status(500).json({ message: 'Failed to fetch leave balances' });
+  }
+});
+
+router.post('/api/leave-balances', async (req, res) => {
+  try {
+    const { employeeId, year, annualEntitlement = 45 } = req.body;
+    
+    if (!employeeId || !year) {
+      return res.status(400).json({ message: 'Employee ID and year are required' });
+    }
+    
+    const result = await db.execute(sql`
+      INSERT INTO leave_balances (employee_id, year, annual_entitlement, used_days, remaining_days)
+      VALUES (${employeeId}, ${year}, ${annualEntitlement}, 0, ${annualEntitlement})
+      ON CONFLICT (employee_id, year) 
+      DO UPDATE SET 
+        annual_entitlement = ${annualEntitlement},
+        remaining_days = ${annualEntitlement} - used_days
+      RETURNING *
+    `);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Failed to create/update leave balance:', error);
+    res.status(500).json({ message: 'Failed to create/update leave balance' });
+  }
+});
+
+router.put('/api/leave-balances/:employeeId/:year', async (req, res) => {
+  try {
+    const { employeeId, year } = req.params;
+    const { usedDays } = req.body;
+    
+    if (usedDays === undefined) {
+      return res.status(400).json({ message: 'Used days value is required' });
+    }
+    
+    const result = await db.execute(sql`
+      UPDATE leave_balances 
+      SET 
+        used_days = ${usedDays},
+        remaining_days = annual_entitlement - ${usedDays},
+        updated_at = now()
+      WHERE employee_id = ${employeeId} AND year = ${year}
+      RETURNING *
+    `);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Leave balance not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Failed to update leave balance:', error);
+    res.status(500).json({ message: 'Failed to update leave balance' });
+  }
+});
+
+router.get('/api/leave-balances/report', async (req, res) => {
+  try {
+    const { year = new Date().getFullYear() } = req.query;
+    
+    const result = await db.execute(sql`
+      SELECT 
+        e.employee_id,
+        e.full_name,
+        d.name as department,
+        e.employee_group,
+        COALESCE(lb.annual_entitlement, 45) as annual_entitlement,
+        COALESCE(lb.used_days, 0) as used_days,
+        COALESCE(lb.remaining_days, 45) as remaining_days,
+        ROUND((COALESCE(lb.used_days, 0) * 100.0 / COALESCE(lb.annual_entitlement, 45)), 2) as utilization_percentage
+      FROM employees e
+      JOIN departments d ON e.department_id = d.id
+      LEFT JOIN leave_balances lb ON e.id = lb.employee_id AND lb.year = ${year}
+      WHERE e.status = 'active'
+      ORDER BY e.full_name
+    `);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Failed to generate leave balance report:', error);
+    res.status(500).json({ message: 'Failed to generate leave balance report' });
+  }
+});
+
 export default router;
 
 export function registerRoutes(app: any) {

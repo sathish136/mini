@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Building, ChartLine, Users, Clock, Calendar, Watch, ChartBar, Settings, User, Bell, UserCircle, LogOut } from "lucide-react";
+import { Building, ChartLine, Users, Clock, Calendar, CalendarDays, Watch, ChartBar, Settings, User, Bell, UserCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,7 @@ const navigation = [
   { name: "Attendance", href: "/attendance", icon: Clock },
   { name: "Leave Management", href: "/leave", icon: Calendar },
   { name: "Leave & Holiday", href: "/holidays", icon: Calendar },
+  { name: "Leave Balance", href: "/leave-balance", icon: CalendarDays },
   { name: "Overtime", href: "/overtime", icon: Watch },
   { name: "Reports", href: "/reports", icon: ChartBar },
   { name: "Settings", href: "/settings", icon: Settings },
