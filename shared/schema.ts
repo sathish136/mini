@@ -128,6 +128,23 @@ export const shortLeaveRequests = pgTable("short_leave_requests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const leaveBalances = pgTable("leave_balances", {
+  id: serial("id").primaryKey(),
+  employeeId: varchar("employee_id", { length: 50 }).references(() => employees.id).notNull(),
+  year: integer("year").notNull(),
+  totalDays: integer("total_days").default(45).notNull(), // 45 days = 21 Annual + 24 Special
+  annualDays: integer("annual_days").default(21).notNull(), // 21 Annual Holidays
+  specialDays: integer("special_days").default(24).notNull(), // 24 Special Holidays
+  usedDays: integer("used_days").default(0).notNull(),
+  remainingDays: integer("remaining_days").default(45).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    employeeYearIdx: uniqueIndex("employee_year_idx").on(table.employeeId, table.year),
+  }
+});
+
 // Adding Group Working Hours settings
 export interface GroupWorkingHours {
   groupA: {
@@ -237,6 +254,13 @@ export const shortLeaveRequestsRelations = relations(shortLeaveRequests, ({ one 
   }),
 }));
 
+export const leaveBalancesRelations = relations(leaveBalances, ({ one }) => ({
+  employee: one(employees, {
+    fields: [leaveBalances.employeeId],
+    references: [employees.id],
+  }),
+}));
+
 // Insert schemas
 export const insertDepartmentSchema = createInsertSchema(departments).omit({ id: true });
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
@@ -307,6 +331,12 @@ export const insertLeaveTypeSchema = createInsertSchema(leaveTypes).omit({
   updatedAt: true,
 });
 
+export const insertLeaveBalanceSchema = createInsertSchema(leaveBalances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type Attendance = typeof attendance.$inferSelect;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
@@ -322,3 +352,5 @@ export type ShortLeaveRequest = typeof shortLeaveRequests.$inferSelect;
 export type InsertShortLeaveRequest = z.infer<typeof insertShortLeaveRequestSchema>;
 export type LeaveType = typeof leaveTypes.$inferSelect;
 export type InsertLeaveType = z.infer<typeof insertLeaveTypeSchema>;
+export type LeaveBalance = typeof leaveBalances.$inferSelect;
+export type InsertLeaveBalance = z.infer<typeof insertLeaveBalanceSchema>;

@@ -2086,11 +2086,11 @@ router.post("/api/leave-deduction/process", async (req, res) => {
     const endOfDay = new Date(processDate.getFullYear(), processDate.getMonth(), processDate.getDate() + 1);
     
     // Get all active employees or specific employee
-    let employeeQuery = db.select().from(employees).where(eq(employees.status, 'active'));
+    let activeEmployees = await storage.getEmployees();
     if (employeeId) {
-      employeeQuery = employeeQuery.where(eq(employees.employeeId, employeeId));
+      activeEmployees = activeEmployees.filter(emp => emp.employeeId === employeeId);
     }
-    const activeEmployees = await employeeQuery;
+    activeEmployees = activeEmployees.filter(emp => emp.status === 'active');
     
     // Get attendance records for the date
     const attendanceRecords = await db.select()
@@ -2099,11 +2099,6 @@ router.post("/api/leave-deduction/process", async (req, res) => {
         gte(attendance.checkIn, startOfDay),
         lt(attendance.checkIn, endOfDay)
       ));
-    
-    // Get leave balances
-    const leaveBalances = await db.select()
-      .from(sql`leave_balances`)
-      .where(eq(sql`year`, processDate.getFullYear()));
     
     // Check for government holidays
     const isHoliday = await db.select()
@@ -2134,26 +2129,22 @@ router.post("/api/leave-deduction/process", async (req, res) => {
       processedEmployees++;
       
       // Check if employee has attendance record for this date
-      const hasAttendance = attendanceRecords.some(att => att.employeeId === employee.employeeId);
+      const hasAttendance = attendanceRecords.some(att => att.employeeId === employee.id);
       
       if (!hasAttendance) {
-        // Employee is absent - check leave balance
-        const balance = leaveBalances.find(b => b.employee_id === employee.employeeId);
-        
-        if (balance && balance.remaining_days > 0) {
-          // Deduct 1 day from leave balance
-          await db.execute(sql`
-            UPDATE leave_balances 
-            SET used_days = used_days + 1,
-                remaining_days = remaining_days - 1,
-                utilization_percentage = ROUND((used_days + 1) * 100.0 / annual_entitlement, 1)
-            WHERE employee_id = ${employee.employeeId} AND year = ${processDate.getFullYear()}
-          `);
-          
+        try {
+          // Employee is absent - deduct from leave balance
+          await storage.deductLeaveBalance(employee.employeeId, processDate.getFullYear(), 1);
           deductedCount++;
-          
-          // Log the deduction (you might want to add an audit table later)
-          console.log(`Leave deducted for employee ${employee.employeeId} (${employee.fullName}) on ${date}`);
+        } catch (error) {
+          // If balance doesn't exist, initialize it first
+          try {
+            await storage.initializeLeaveBalance(employee.employeeId, processDate.getFullYear());
+            await storage.deductLeaveBalance(employee.employeeId, processDate.getFullYear(), 1);
+            deductedCount++;
+          } catch (initError) {
+            console.error(`Failed to initialize/deduct leave balance for employee ${employee.employeeId}:`, initError);
+          }
         }
       }
     }
@@ -3167,6 +3158,92 @@ router.get('/api/leave-balances/report', async (req, res) => {
   } catch (error) {
     console.error('Failed to generate leave balance report:', error);
     res.status(500).json({ message: 'Failed to generate leave balance report' });
+  }
+});
+
+// Leave Balance API Endpoints
+router.get('/api/leave-balances', async (req, res) => {
+  try {
+    const { employeeId, year } = req.query;
+    const balances = await storage.getLeaveBalances(
+      employeeId as string, 
+      year ? parseInt(year as string) : undefined
+    );
+    res.json(balances);
+  } catch (error) {
+    console.error('Failed to fetch leave balances:', error);
+    res.status(500).json({ message: 'Failed to fetch leave balances' });
+  }
+});
+
+router.get('/api/leave-balances/:employeeId/:year', async (req, res) => {
+  try {
+    const { employeeId, year } = req.params;
+    const balance = await storage.getLeaveBalance(employeeId, parseInt(year));
+    
+    if (!balance) {
+      return res.status(404).json({ message: 'Leave balance not found' });
+    }
+    
+    res.json(balance);
+  } catch (error) {
+    console.error('Failed to fetch leave balance:', error);
+    res.status(500).json({ message: 'Failed to fetch leave balance' });
+  }
+});
+
+router.post('/api/leave-balances', async (req, res) => {
+  try {
+    const balance = await storage.createLeaveBalance(req.body);
+    res.status(201).json(balance);
+  } catch (error) {
+    console.error('Failed to create leave balance:', error);
+    res.status(500).json({ message: 'Failed to create leave balance' });
+  }
+});
+
+router.put('/api/leave-balances/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const balance = await storage.updateLeaveBalance(parseInt(id), req.body);
+    res.json(balance);
+  } catch (error) {
+    console.error('Failed to update leave balance:', error);
+    res.status(500).json({ message: 'Failed to update leave balance' });
+  }
+});
+
+router.post('/api/leave-balances/:employeeId/deduct', async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { year, daysToDeduct } = req.body;
+    
+    if (!year || !daysToDeduct) {
+      return res.status(400).json({ message: 'Year and daysToDeduct are required' });
+    }
+    
+    const balance = await storage.deductLeaveBalance(employeeId, year, daysToDeduct);
+    res.json(balance);
+  } catch (error) {
+    console.error('Failed to deduct leave balance:', error);
+    res.status(500).json({ message: 'Failed to deduct leave balance' });
+  }
+});
+
+router.post('/api/leave-balances/:employeeId/initialize', async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { year } = req.body;
+    
+    if (!year) {
+      return res.status(400).json({ message: 'Year is required' });
+    }
+    
+    const balance = await storage.initializeLeaveBalance(employeeId, year);
+    res.status(201).json(balance);
+  } catch (error) {
+    console.error('Failed to initialize leave balance:', error);
+    res.status(500).json({ message: 'Failed to initialize leave balance' });
   }
 });
 

@@ -98,16 +98,6 @@ export default function Reports() {
     enabled: reportType === "monthly-attendance",
   });
 
-  const { data: leaveBalanceData, isLoading: isLeaveBalanceLoading } = useQuery({
-    queryKey: ["/api/leave-balances/report", new Date().getFullYear()],
-    queryFn: async () => {
-      const response = await fetch(`/api/leave-balances/report?year=${new Date().getFullYear()}`);
-      if (!response.ok) throw new Error("Failed to fetch leave balance report");
-      return response.json();
-    },
-    enabled: reportType === "leave-balance",
-  });
-
   const { data: dailyAttendanceData, isLoading: isDailyAttendanceLoading } = useQuery({
     queryKey: ["/api/reports/daily-attendance", startDate, selectedEmployee, selectedGroup],
     queryFn: async () => {
@@ -171,22 +161,6 @@ export default function Reports() {
     enabled: reportType === "half-day",
   });
 
-  const { data: shortLeaveUsageData, isLoading: isShortLeaveUsageLoading } = useQuery({
-    queryKey: ["/api/reports/short-leave-usage", startDate, endDate, selectedEmployee, selectedGroup],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        startDate,
-        endDate,
-        employeeId: selectedEmployee,
-        group: selectedGroup,
-      });
-      const response = await fetch(`/api/reports/short-leave-usage?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch short leave usage report");
-      return response.json();
-    },
-    enabled: reportType === "short-leave-usage",
-  });
-
   // Fetch HR settings for displaying policy information
   const { data: groupSettings } = useQuery({
     queryKey: ["/api/group-working-hours"],
@@ -239,17 +213,9 @@ export default function Reports() {
         data = halfDayData;
         filename = `half-day-${startDate}-to-${endDate}`;
         break;
-      case "short-leave-usage":
-        data = shortLeaveUsageData;
-        filename = `short-leave-usage-${startDate}-to-${endDate}`;
-        break;
       case "offer-attendance":
         data = offerAttendanceData;
         filename = `offer-attendance-${startDate}-to-${endDate}`;
-        break;
-      case "leave-balance":
-        data = leaveBalanceData;
-        filename = `leave-balance-${new Date().getFullYear()}`;
         break;
       default:
         return;
@@ -308,9 +274,7 @@ export default function Reports() {
         case 'half-day':
           reportTitle = 'Half Day Report';
           break;
-        case 'short-leave-usage':
-          reportTitle = 'Short Leave Usage Report';
-          break;
+
         default:
           reportTitle = 'Attendance Report';
       }
@@ -455,10 +419,7 @@ export default function Reports() {
           data = halfDayData;
           filename = `half-day-${startDate}-to-${endDate}`;
           break;
-        case "short-leave-usage":
-          data = shortLeaveUsageData;
-          filename = `short-leave-usage-${startDate}-to-${endDate}`;
-          break;
+
         case "offer-attendance":
           data = offerAttendanceData;
           filename = `offer-attendance-${startDate}-to-${endDate}`;
@@ -2376,9 +2337,7 @@ export default function Reports() {
                 <SelectItem value="monthly-attendance">Monthly Attendance Sheet</SelectItem>
                 <SelectItem value="late-arrival">Late Arrival Report</SelectItem>
                 <SelectItem value="half-day">Half Day Report</SelectItem>
-                <SelectItem value="short-leave-usage">Short Leave Usage Report</SelectItem>
                 <SelectItem value="offer-attendance">1/4 Offer-Attendance Report</SelectItem>
-                <SelectItem value="leave-balance">Leave Balance Report</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -2434,7 +2393,7 @@ export default function Reports() {
               </SelectContent>
             </Select>
           </div>
-          {(reportType === "monthly-attendance" || reportType === "daily-ot" || reportType === "daily-attendance" || reportType === "offer-attendance" || reportType === "late-arrival" || reportType === "half-day" || reportType === "short-leave-usage") && (
+          {(reportType === "monthly-attendance" || reportType === "daily-ot" || reportType === "daily-attendance" || reportType === "offer-attendance" || reportType === "late-arrival" || reportType === "half-day") && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
               <Select value={selectedGroup} onValueChange={setSelectedGroup}>
@@ -2458,9 +2417,7 @@ export default function Reports() {
       {reportType === "monthly-attendance" && renderMonthlyAttendanceSheet()}
       {reportType === "late-arrival" && renderLateArrivalReport()}
       {reportType === "half-day" && renderHalfDayReport()}
-      {reportType === "short-leave-usage" && renderShortLeaveUsageReport()}
       {reportType === "offer-attendance" && renderOfferAttendanceReport()}
-      {reportType === "leave-balance" && renderLeaveBalanceReport()}
 
       {/* Export Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>

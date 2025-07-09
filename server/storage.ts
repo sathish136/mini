@@ -6,6 +6,7 @@ import {
   biometricDevices,
   holidays,
   leaveTypes,
+  leaveBalances,
   type Employee, 
   type InsertEmployee,
   type Attendance,
@@ -19,7 +20,9 @@ import {
   type Holiday,
   type InsertHoliday,
   type LeaveType,
-  type InsertLeaveType
+  type InsertLeaveType,
+  type LeaveBalance,
+  type InsertLeaveBalance
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql, count, sum } from "drizzle-orm";
@@ -81,6 +84,14 @@ export interface IStorage {
   createLeaveType(leaveType: InsertLeaveType): Promise<LeaveType>;
   updateLeaveType(id: number, leaveType: Partial<InsertLeaveType>): Promise<LeaveType>;
   deleteLeaveType(id: number): Promise<void>;
+  
+  // Leave balance operations
+  getLeaveBalances(employeeId?: string, year?: number): Promise<LeaveBalance[]>;
+  getLeaveBalance(employeeId: string, year: number): Promise<LeaveBalance | undefined>;
+  createLeaveBalance(leaveBalance: InsertLeaveBalance): Promise<LeaveBalance>;
+  updateLeaveBalance(id: number, leaveBalance: Partial<InsertLeaveBalance>): Promise<LeaveBalance>;
+  deductLeaveBalance(employeeId: string, year: number, daysToDeduct: number): Promise<LeaveBalance>;
+  initializeLeaveBalance(employeeId: string, year: number): Promise<LeaveBalance>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -397,6 +408,83 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLeaveType(id: number): Promise<void> {
     await db.delete(leaveTypes).where(eq(leaveTypes.id, id));
+  }
+
+  // Leave balance operations
+  async getLeaveBalances(employeeId?: string, year?: number): Promise<LeaveBalance[]> {
+    let query = db.select().from(leaveBalances);
+    
+    const conditions = [];
+    if (employeeId) {
+      conditions.push(eq(leaveBalances.employeeId, employeeId));
+    }
+    if (year) {
+      conditions.push(eq(leaveBalances.year, year));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(leaveBalances.year, leaveBalances.employeeId);
+  }
+
+  async getLeaveBalance(employeeId: string, year: number): Promise<LeaveBalance | undefined> {
+    const result = await db.select().from(leaveBalances)
+      .where(and(eq(leaveBalances.employeeId, employeeId), eq(leaveBalances.year, year)))
+      .limit(1);
+    return result[0];
+  }
+
+  async createLeaveBalance(leaveBalance: InsertLeaveBalance): Promise<LeaveBalance> {
+    const result = await db.insert(leaveBalances).values(leaveBalance).returning();
+    return result[0];
+  }
+
+  async updateLeaveBalance(id: number, leaveBalance: Partial<InsertLeaveBalance>): Promise<LeaveBalance> {
+    const result = await db.update(leaveBalances)
+      .set({ ...leaveBalance, updatedAt: new Date() })
+      .where(eq(leaveBalances.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deductLeaveBalance(employeeId: string, year: number, daysToDeduct: number): Promise<LeaveBalance> {
+    // Get current leave balance or create new one
+    let balance = await this.getLeaveBalance(employeeId, year);
+    
+    if (!balance) {
+      balance = await this.initializeLeaveBalance(employeeId, year);
+    }
+    
+    // Deduct the leave days
+    const newUsedDays = balance.usedDays + daysToDeduct;
+    const newRemainingDays = balance.totalDays - newUsedDays;
+    
+    const result = await db.update(leaveBalances)
+      .set({
+        usedDays: newUsedDays,
+        remainingDays: newRemainingDays,
+        updatedAt: new Date()
+      })
+      .where(eq(leaveBalances.id, balance.id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async initializeLeaveBalance(employeeId: string, year: number): Promise<LeaveBalance> {
+    const newBalance: InsertLeaveBalance = {
+      employeeId,
+      year,
+      totalDays: 45,
+      annualDays: 21,
+      specialDays: 24,
+      usedDays: 0,
+      remainingDays: 45
+    };
+    
+    return await this.createLeaveBalance(newBalance);
   }
 }
 

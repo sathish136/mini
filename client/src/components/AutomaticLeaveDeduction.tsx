@@ -35,11 +35,11 @@ export default function AutomaticLeaveDeduction() {
     },
   });
 
-  // Fetch leave balances
+  // Fetch leave balances for current year
   const { data: leaveBalances } = useQuery({
-    queryKey: ["/api/leave-balances"],
+    queryKey: ["/api/leave-balances", new Date().getFullYear()],
     queryFn: async () => {
-      const response = await fetch("/api/leave-balances");
+      const response = await fetch(`/api/leave-balances?year=${new Date().getFullYear()}`);
       if (!response.ok) throw new Error("Failed to fetch leave balances");
       return response.json();
     },
@@ -79,11 +79,11 @@ export default function AutomaticLeaveDeduction() {
   };
 
   // Calculate statistics
-  const activeEmployees = employees?.filter((emp: any) => emp.isActive) || [];
+  const activeEmployees = employees?.filter((emp: any) => emp.status === 'active') || [];
   const totalEmployees = activeEmployees.length;
   const attendedEmployees = attendanceData?.length || 0;
   const absentEmployees = totalEmployees - attendedEmployees;
-  const eligibleForDeduction = leaveBalances?.filter((balance: any) => balance.remaining_days > 0)?.length || 0;
+  const eligibleForDeduction = leaveBalances?.filter((balance: any) => balance.remainingDays > 0)?.length || 0;
 
   return (
     <div className="space-y-6">
