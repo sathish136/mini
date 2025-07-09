@@ -130,10 +130,11 @@ export default function LeaveBalanceManagement() {
   };
 
   // Calculate summary statistics
-  const totalEmployees = leaveReport.length;
-  const totalEntitlement = leaveReport.reduce((sum, emp) => sum + emp.annual_entitlement, 0);
-  const totalUsed = leaveReport.reduce((sum, emp) => sum + emp.used_days, 0);
-  const totalRemaining = leaveReport.reduce((sum, emp) => sum + emp.remaining_days, 0);
+  const reportData = Array.isArray(leaveReport) ? leaveReport : [];
+  const totalEmployees = reportData.length;
+  const totalEntitlement = reportData.reduce((sum, emp) => sum + (emp.annual_entitlement || 0), 0);
+  const totalUsed = reportData.reduce((sum, emp) => sum + (emp.used_days || 0), 0);
+  const totalRemaining = reportData.reduce((sum, emp) => sum + (emp.remaining_days || 0), 0);
   const averageUtilization = totalEmployees > 0 ? (totalUsed / totalEntitlement * 100).toFixed(1) : 0;
 
   return (
@@ -322,7 +323,7 @@ export default function LeaveBalanceManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leaveReport.map((balance) => (
+                  {reportData.map((balance) => (
                     <tr key={`${balance.employee_id}-${balance.year}`} className="hover:bg-gray-50">
                       <td className="border border-gray-200 px-4 py-2 text-sm">{balance.emp_id}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm font-medium">{balance.full_name}</td>
@@ -364,7 +365,7 @@ export default function LeaveBalanceManagement() {
                 </tbody>
               </table>
               
-              {leaveReport.length === 0 && (
+              {reportData.length === 0 && (
                 <div className="text-center py-8">
                   <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <p className="text-gray-500">No leave balance records found for {selectedYear}</p>

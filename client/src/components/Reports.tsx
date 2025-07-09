@@ -98,6 +98,16 @@ export default function Reports() {
     enabled: reportType === "monthly-attendance",
   });
 
+  const { data: leaveBalanceData, isLoading: isLeaveBalanceLoading } = useQuery({
+    queryKey: ["/api/leave-balances/report", new Date().getFullYear()],
+    queryFn: async () => {
+      const response = await fetch(`/api/leave-balances/report?year=${new Date().getFullYear()}`);
+      if (!response.ok) throw new Error("Failed to fetch leave balance report");
+      return response.json();
+    },
+    enabled: reportType === "leave-balance",
+  });
+
   const { data: dailyAttendanceData, isLoading: isDailyAttendanceLoading } = useQuery({
     queryKey: ["/api/reports/daily-attendance", startDate, selectedEmployee, selectedGroup],
     queryFn: async () => {
@@ -236,6 +246,10 @@ export default function Reports() {
       case "offer-attendance":
         data = offerAttendanceData;
         filename = `offer-attendance-${startDate}-to-${endDate}`;
+        break;
+      case "leave-balance":
+        data = leaveBalanceData;
+        filename = `leave-balance-${new Date().getFullYear()}`;
         break;
       default:
         return;
@@ -2148,6 +2162,182 @@ export default function Reports() {
     );
   };
 
+  // Leave Balance Report
+  const renderLeaveBalanceReport = () => {
+    if (isLeaveBalanceLoading) {
+      return (
+        <div className="p-6">
+          <Card className="shadow-sm border border-gray-200">
+            <CardContent className="p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto mb-4"></div>
+                <div className="text-lg text-gray-600">Loading leave balance report...</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    if (!leaveBalanceData || leaveBalanceData.length === 0) {
+      return (
+        <div className="p-6">
+          <Card className="shadow-sm border border-gray-200">
+            <CardContent className="p-8 text-center">
+              <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Leave Balance Data Found</h3>
+              <p className="text-gray-600">No leave balance records found for the selected period.</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    const reportData = Array.isArray(leaveBalanceData) ? leaveBalanceData : [];
+    const totalEmployees = reportData.length;
+    const totalEntitlement = reportData.reduce((sum, emp) => sum + (emp.annual_entitlement || 0), 0);
+    const totalUsed = reportData.reduce((sum, emp) => sum + (emp.used_days || 0), 0);
+    const totalRemaining = reportData.reduce((sum, emp) => sum + (emp.remaining_days || 0), 0);
+    const averageUtilization = totalEmployees > 0 ? (totalUsed / totalEntitlement * 100).toFixed(1) : 0;
+
+    return (
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <Card className="shadow-md border border-gray-200 bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg text-gray-800">
+              <Users className="h-5 w-5 text-gray-600" />
+              Leave Balance Report - {new Date().getFullYear()}
+            </CardTitle>
+            <div className="text-sm text-gray-600">
+              <p>Annual leave entitlement: 45 days per employee</p>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Summary Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="flex items-center p-4">
+              <div className="rounded-full bg-blue-500 p-3 mr-3">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-blue-600 font-medium">Total Employees</p>
+                <p className="text-xl font-bold text-blue-900">{totalEmployees}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardContent className="flex items-center p-4">
+              <div className="rounded-full bg-green-500 p-3 mr-3">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-green-600 font-medium">Total Entitlement</p>
+                <p className="text-xl font-bold text-green-900">{totalEntitlement} days</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="flex items-center p-4">
+              <div className="rounded-full bg-orange-500 p-3 mr-3">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-orange-600 font-medium">Total Used</p>
+                <p className="text-xl font-bold text-orange-900">{totalUsed} days</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="flex items-center p-4">
+              <div className="rounded-full bg-purple-500 p-3 mr-3">
+                <TrendingUp className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-purple-600 font-medium">Average Utilization</p>
+                <p className="text-xl font-bold text-purple-900">{averageUtilization}%</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Data Table */}
+        <Card className="shadow-md border border-gray-200 bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg text-gray-800">
+              <FileText className="h-5 w-5" />
+              Leave Balance Records ({reportData.length} employees)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-gradient-to-r from-gray-100 to-gray-200 border-b-2 border-gray-300">
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">S.No</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">Employee ID</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">Full Name</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">Department</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">Group</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">Entitlement</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">Used Days</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 border-r border-gray-200">Remaining</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700">Utilization</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {reportData.map((balance: any, index: number) => (
+                    <tr 
+                      key={index} 
+                      className={`hover:bg-gray-50 transition-colors duration-150 ${
+                        balance.employee_group === 'group_a' ? 'bg-blue-25' : 'bg-purple-25'
+                      }`}
+                    >
+                      <td className="px-3 py-2 text-gray-700 font-medium border-r border-gray-200">{index + 1}</td>
+                      <td className="px-3 py-2 text-gray-900 font-semibold border-r border-gray-200">{balance.employee_id}</td>
+                      <td className="px-3 py-2 text-gray-900 border-r border-gray-200">{balance.full_name}</td>
+                      <td className="px-3 py-2 text-gray-700 border-r border-gray-200">{balance.department}</td>
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          balance.employee_group === 'group_a' 
+                            ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                            : 'bg-purple-100 text-purple-800 border border-purple-200'
+                        }`}>
+                          {balance.employee_group === 'group_a' ? 'Group A' : 'Group B'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700 font-medium border-r border-gray-200">{balance.annual_entitlement}</td>
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <span className={`font-medium ${balance.used_days > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {balance.used_days}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <span className={`font-medium ${balance.remaining_days < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                          {balance.remaining_days}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className={`font-medium ${balance.utilization_percentage > 80 ? 'text-red-600' : balance.utilization_percentage > 50 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {balance.utilization_percentage}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
@@ -2188,6 +2378,7 @@ export default function Reports() {
                 <SelectItem value="half-day">Half Day Report</SelectItem>
                 <SelectItem value="short-leave-usage">Short Leave Usage Report</SelectItem>
                 <SelectItem value="offer-attendance">1/4 Offer-Attendance Report</SelectItem>
+                <SelectItem value="leave-balance">Leave Balance Report</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -2269,6 +2460,7 @@ export default function Reports() {
       {reportType === "half-day" && renderHalfDayReport()}
       {reportType === "short-leave-usage" && renderShortLeaveUsageReport()}
       {reportType === "offer-attendance" && renderOfferAttendanceReport()}
+      {reportType === "leave-balance" && renderLeaveBalanceReport()}
 
       {/* Export Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>

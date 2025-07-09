@@ -2072,6 +2072,106 @@ router.get("/api/zk-devices/status", async (req, res) => {
   }
 });
 
+// Automatic Leave Deduction Route
+router.post("/api/leave-deduction/process", async (req, res) => {
+  try {
+    const { date, employeeId } = req.body;
+    
+    if (!date) {
+      return res.status(400).json({ success: false, message: "Date is required" });
+    }
+    
+    const processDate = new Date(date);
+    const startOfDay = new Date(processDate.getFullYear(), processDate.getMonth(), processDate.getDate());
+    const endOfDay = new Date(processDate.getFullYear(), processDate.getMonth(), processDate.getDate() + 1);
+    
+    // Get all active employees or specific employee
+    let employeeQuery = db.select().from(employees).where(eq(employees.status, 'active'));
+    if (employeeId) {
+      employeeQuery = employeeQuery.where(eq(employees.employeeId, employeeId));
+    }
+    const activeEmployees = await employeeQuery;
+    
+    // Get attendance records for the date
+    const attendanceRecords = await db.select()
+      .from(attendance)
+      .where(and(
+        gte(attendance.checkIn, startOfDay),
+        lt(attendance.checkIn, endOfDay)
+      ));
+    
+    // Get leave balances
+    const leaveBalances = await db.select()
+      .from(sql`leave_balances`)
+      .where(eq(sql`year`, processDate.getFullYear()));
+    
+    // Check for government holidays
+    const isHoliday = await db.select()
+      .from(holidays)
+      .where(eq(holidays.date, startOfDay))
+      .limit(1);
+    
+    // Check if it's a weekend
+    const dayOfWeek = processDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+    
+    // If it's a holiday or weekend, don't process leave deduction
+    if (isHoliday.length > 0 || isWeekend) {
+      return res.json({
+        success: true,
+        message: "No leave deduction processed - holiday or weekend",
+        processedEmployees: 0,
+        deductedCount: 0,
+        reason: isHoliday.length > 0 ? "Government holiday" : "Weekend"
+      });
+    }
+    
+    let processedEmployees = 0;
+    let deductedCount = 0;
+    
+    // Process each employee
+    for (const employee of activeEmployees) {
+      processedEmployees++;
+      
+      // Check if employee has attendance record for this date
+      const hasAttendance = attendanceRecords.some(att => att.employeeId === employee.employeeId);
+      
+      if (!hasAttendance) {
+        // Employee is absent - check leave balance
+        const balance = leaveBalances.find(b => b.employee_id === employee.employeeId);
+        
+        if (balance && balance.remaining_days > 0) {
+          // Deduct 1 day from leave balance
+          await db.execute(sql`
+            UPDATE leave_balances 
+            SET used_days = used_days + 1,
+                remaining_days = remaining_days - 1,
+                utilization_percentage = ROUND((used_days + 1) * 100.0 / annual_entitlement, 1)
+            WHERE employee_id = ${employee.employeeId} AND year = ${processDate.getFullYear()}
+          `);
+          
+          deductedCount++;
+          
+          // Log the deduction (you might want to add an audit table later)
+          console.log(`Leave deducted for employee ${employee.employeeId} (${employee.fullName}) on ${date}`);
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Leave deduction processed successfully`,
+      processedEmployees,
+      deductedCount,
+      date: date
+    });
+    
+  } catch (error) {
+    console.error("Failed to process leave deduction:", error);
+    res.status(500).json({ success: false, message: "Failed to process leave deduction" });
+  }
+});
+
 // Database Management Routes
 let backups: any[] = [];
 
