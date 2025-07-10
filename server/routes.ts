@@ -545,9 +545,9 @@ async function initializeLeaveTables() {
         id SERIAL PRIMARY KEY,
         employee_id VARCHAR(50) NOT NULL,
         year INTEGER NOT NULL,
-        annual_leave_balance INTEGER DEFAULT 21 NOT NULL,
-        sick_leave_balance INTEGER DEFAULT 14 NOT NULL,
-        casual_leave_balance INTEGER DEFAULT 7 NOT NULL,
+        annual_entitlement INTEGER DEFAULT 45 NOT NULL,
+        used_days INTEGER DEFAULT 0 NOT NULL,
+        remaining_days INTEGER DEFAULT 45 NOT NULL,
         created_at TIMESTAMP DEFAULT now() NOT NULL,
         updated_at TIMESTAMP DEFAULT now() NOT NULL,
         UNIQUE(employee_id, year)

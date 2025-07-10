@@ -9,7 +9,6 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: ChartLine },
   { name: "Employee Master", href: "/employees", icon: Users },
   { name: "Attendance", href: "/attendance", icon: Clock },
-  { name: "Leave Deduction", href: "/leave", icon: Calendar },
   { name: "Leave Balance", href: "/leave-balance", icon: CalendarDays },
   { name: "Overtime", href: "/overtime", icon: Watch },
   { name: "Reports", href: "/reports", icon: ChartBar },

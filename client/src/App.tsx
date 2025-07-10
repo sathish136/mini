@@ -10,7 +10,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import Dashboard from "@/components/Dashboard";
 import EmployeeManagement from "@/components/EmployeeManagement";
 import AttendanceTracker from "@/components/AttendanceTracker";
-import AutomaticLeaveDeduction from "@/components/AutomaticLeaveDeduction";
+
 import OvertimeManagement from "@/components/OvertimeManagement";
 import Reports from "@/components/Reports";
 import Settings from "@/components/Settings";
@@ -43,7 +43,6 @@ function App() {
               <Route path="/" component={Dashboard} />
               <Route path="/employees" component={EmployeeManagement} />
               <Route path="/attendance" component={AttendanceTracker} />
-              <Route path="/leave" component={AutomaticLeaveDeduction} />
               <Route path="/leave-balance" component={LeaveBalanceManagement} />
               <Route path="/overtime" component={OvertimeManagement} />
               <Route path="/reports" component={Reports} />
