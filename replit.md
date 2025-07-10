@@ -340,3 +340,7 @@ Changelog:
     - All API endpoints functional with real database connections and proper error handling
     - Application server running successfully on port 5000 with full functionality
     - System fully operational and ready for production use with complete feature set
+    - Simplified leave balance management with unified add/deduct interface for easier user experience
+    - Created UnifiedLeaveManagement component combining leave deduction and balance management into single interface
+    - Added quick action buttons for one-click leave adjustments (+1/-1 days)
+    - Improved user experience with cleaner, more intuitive leave management workflow
