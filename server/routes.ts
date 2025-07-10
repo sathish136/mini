@@ -539,17 +539,21 @@ async function initializeLeaveTables() {
       );
     `);
     
-    // Insert default leave types
-    await db.execute(sql`
-      INSERT INTO leave_types (name, description, max_days_per_year, is_active) 
-      VALUES 
-        ('annual', 'Annual vacation leave', 21, true),
-        ('sick', 'Medical leave for illness', 14, true),
-        ('casual', 'Short-term personal leave', 7, true),
-        ('maternity', 'Maternity leave for female employees', 84, true),
-        ('paternity', 'Paternity leave for male employees', 7, true)
-      ON CONFLICT (name) DO NOTHING;
-    `);
+    // Insert default leave types only if they don't exist
+    const existingTypes = await db.execute(sql`SELECT COUNT(*) as count FROM leave_types`);
+    const count = existingTypes[0]?.count || 0;
+    
+    if (count === 0) {
+      await db.execute(sql`
+        INSERT INTO leave_types (name, description, max_days_per_year, is_active) 
+        VALUES 
+          ('annual', 'Annual vacation leave', 21, true),
+          ('sick', 'Medical leave for illness', 14, true),
+          ('casual', 'Short-term personal leave', 7, true),
+          ('maternity', 'Maternity leave for female employees', 84, true),
+          ('paternity', 'Paternity leave for male employees', 7, true);
+      `);
+    }
     
     // Check if leave_type_id column exists and add it if missing
     const columnCheck = await db.execute(sql`
