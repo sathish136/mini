@@ -331,7 +331,7 @@ Changelog:
     - Fixed login flow issue where application required refresh after login to load properly
     - Enhanced AuthGuard with periodic authentication checking for immediate state updates
     - Login now properly redirects and loads application without requiring manual refresh
-  - Migration to Standard Replit Environment Completed Successfully (July 9, 2025):
+  - Migration to Standard Replit Environment Completed Successfully (July 10, 2025):
     - Successfully migrated complete HR Attendance Management System from Replit Agent to standard Replit environment
     - Fixed cross-env dependency issue by installing missing cross-env package
     - Established PostgreSQL database connection with provided database credentials
@@ -340,3 +340,9 @@ Changelog:
     - All API endpoints functional with real database connections and proper error handling
     - Application server running successfully on port 5000 with full functionality
     - System fully operational and ready for production use with complete feature set
+    - Successfully completed migration from Replit Agent to standard Replit environment (July 10, 2025)
+    - Fixed database connection issues and created leave_balances table
+    - Removed "Leave & Holiday" page from navigation and routing as requested by user
+    - All database tables properly initialized and functional
+    - Application running successfully on port 5000 with all features working
+    - Migration checklist fully completed and verified

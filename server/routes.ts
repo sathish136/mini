@@ -538,6 +538,21 @@ async function initializeLeaveTables() {
         updated_at TIMESTAMP DEFAULT now() NOT NULL
       );
     `);
+
+    // Create leave_balances table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS leave_balances (
+        id SERIAL PRIMARY KEY,
+        employee_id VARCHAR(50) NOT NULL,
+        year INTEGER NOT NULL,
+        annual_leave_balance INTEGER DEFAULT 21 NOT NULL,
+        sick_leave_balance INTEGER DEFAULT 14 NOT NULL,
+        casual_leave_balance INTEGER DEFAULT 7 NOT NULL,
+        created_at TIMESTAMP DEFAULT now() NOT NULL,
+        updated_at TIMESTAMP DEFAULT now() NOT NULL,
+        UNIQUE(employee_id, year)
+      );
+    `);
     
     // Insert default leave types only if they don't exist
     const existingTypes = await db.execute(sql`SELECT COUNT(*) as count FROM leave_types`);
