@@ -982,6 +982,49 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Holiday Settings */}
+          <Card className="border border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Holiday Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Default holiday allocation for all employee groups
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-blue-700">21</div>
+                      <div className="text-sm text-gray-600">Annual Holidays</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-blue-700">24</div>
+                      <div className="text-sm text-gray-600">Special Holidays</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-blue-800">45</div>
+                      <div className="text-sm font-medium text-gray-700">Total Holidays</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-4 h-4 text-amber-600 mr-2" />
+                    <p className="text-sm text-amber-800">
+                      These holiday settings apply to all employee groups (Group A & Group B)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Company Settings Tab */}

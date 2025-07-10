@@ -353,6 +353,11 @@ Changelog:
     - All API endpoints responding correctly with proper authentication and license validation
     - Database tables properly initialized with correct schema structure
     - Migration completed successfully - system ready for full production use
+    - Added Holiday Settings to General Settings tab with default values:
+      • Annual Holidays: 21 days
+      • Special Holidays: 24 days
+      • Total Holidays: 45 days
+      These settings apply to all employee groups (Group A & Group B)
     - Successfully completed migration from Replit Agent to standard Replit environment (July 10, 2025)
     - Fixed database connection issues and created leave_balances table
     - Removed "Leave & Holiday" page from navigation and routing as requested by user
