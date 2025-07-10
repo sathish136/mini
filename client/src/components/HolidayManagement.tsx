@@ -154,16 +154,16 @@ export default function HolidayManagement() {
 
   // Calculate holiday statistics
   const holidayStats = {
-    annual: holidays?.filter((h: Holiday) => h.type === "annual").length || 0,
-    special: holidays?.filter((h: Holiday) => h.type === "special").length || 0,
-    weekend: holidays?.filter((h: Holiday) => h.type === "weekend").length || 0,
-    total: holidays?.length || 0,
+    annual: Array.isArray(holidays) ? holidays.filter((h: Holiday) => h.type === "annual").length : 0,
+    special: Array.isArray(holidays) ? holidays.filter((h: Holiday) => h.type === "special").length : 0,
+    weekend: Array.isArray(holidays) ? holidays.filter((h: Holiday) => h.type === "weekend").length : 0,
+    total: Array.isArray(holidays) ? holidays.length : 0,
   };
 
-  const filteredHolidays = holidays?.filter((holiday: Holiday) => {
+  const filteredHolidays = Array.isArray(holidays) ? holidays.filter((holiday: Holiday) => {
     if (filterType === "all") return true;
     return holiday.type === filterType;
-  }) || [];
+  }) : [];
 
   // Export holiday report
   const exportReport = () => {

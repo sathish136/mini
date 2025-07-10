@@ -18,28 +18,38 @@ export default function AutomaticLeaveDeduction() {
   // Fetch employees
   const { data: employees = [] } = useQuery({
     queryKey: ["/api/employees"],
-    queryFn: () => apiRequest("GET", "/api/employees"),
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/employees");
+      return response.json();
+    },
   });
 
   // Fetch attendance data for the selected date
   const { data: attendanceData = [], isLoading: isAttendanceLoading } = useQuery({
     queryKey: ["/api/attendance", selectedDate],
-    queryFn: () => apiRequest("GET", `/api/attendance?date=${selectedDate}`),
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/attendance?date=${selectedDate}`);
+      return response.json();
+    },
   });
 
   // Fetch leave balances for current year
   const { data: leaveBalances = [] } = useQuery({
     queryKey: ["/api/leave-balances/report", new Date().getFullYear()],
-    queryFn: () => apiRequest("GET", `/api/leave-balances/report?year=${new Date().getFullYear()}`),
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/leave-balances/report?year=${new Date().getFullYear()}`);
+      return response.json();
+    },
   });
 
   // Process automatic leave deduction
   const processLeaveDeductionMutation = useMutation({
     mutationFn: async ({ date, employeeId }: { date: string; employeeId?: string }) => {
-      return apiRequest("POST", "/api/leave-deduction/process", {
+      const response = await apiRequest("POST", "/api/leave-deduction/process", {
         date,
         employeeId: employeeId === "all" ? undefined : employeeId
       });
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leave-balances"] });
@@ -66,11 +76,11 @@ export default function AutomaticLeaveDeduction() {
   };
 
   // Calculate statistics
-  const activeEmployees = employees?.filter((emp: any) => emp.status === 'active') || [];
+  const activeEmployees = Array.isArray(employees) ? employees.filter((emp: any) => emp.status === 'active') : [];
   const totalEmployees = activeEmployees.length;
-  const attendedEmployees = attendanceData?.length || 0;
+  const attendedEmployees = Array.isArray(attendanceData) ? attendanceData.length : 0;
   const absentEmployees = totalEmployees - attendedEmployees;
-  const eligibleForDeduction = leaveBalances?.filter((balance: any) => balance.remaining_days > 0)?.length || 0;
+  const eligibleForDeduction = Array.isArray(leaveBalances) ? leaveBalances.filter((balance: any) => balance.remaining_days > 0).length : 0;
 
   return (
     <div className="space-y-6 p-6">
