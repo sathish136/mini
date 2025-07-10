@@ -29,26 +29,15 @@ export default function HolidayManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: holidays, isLoading } = useQuery({
+  const { data: holidays = [], isLoading } = useQuery({
     queryKey: ["/api/holidays", selectedYear],
-    queryFn: async () => {
-      const response = await fetch(`/api/holidays?year=${selectedYear}`);
-      if (!response.ok) {
-        // Return empty array if holidays endpoint doesn't exist yet
-        if (response.status === 404) return [];
-        throw new Error("Failed to fetch holidays");
-      }
-      return response.json();
-    },
+    queryFn: () => apiRequest("GET", `/api/holidays?year=${selectedYear}`),
   });
 
 
 
   const createHolidayMutation = useMutation({
-    mutationFn: async (holiday: InsertHoliday) => {
-      const response = await apiRequest("POST", "/api/holidays", holiday);
-      return response.json();
-    },
+    mutationFn: (holiday: InsertHoliday) => apiRequest("POST", "/api/holidays", holiday),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/holidays"] });
       toast({
@@ -56,16 +45,7 @@ export default function HolidayManagement() {
         description: "Holiday created successfully",
       });
       setIsDialogOpen(false);
-      form.reset({
-        name: "",
-        date: new Date(),
-        type: "annual",
-        description: "",
-        isRecurring: false,
-        applicableGroups: ["group_a", "group_b"],
-        year: new Date().getFullYear(),
-        isActive: true,
-      });
+      form.reset();
     },
     onError: (error: any) => {
       toast({
@@ -108,10 +88,8 @@ export default function HolidayManagement() {
   };
 
   const updateHolidayMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: InsertHoliday }) => {
-      const response = await apiRequest("PUT", `/api/holidays/${id}`, data);
-      return response.json();
-    },
+    mutationFn: ({ id, data }: { id: number; data: InsertHoliday }) => 
+      apiRequest("PUT", `/api/holidays/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/holidays"] });
       toast({
@@ -120,16 +98,7 @@ export default function HolidayManagement() {
       });
       setIsEditDialogOpen(false);
       setEditingHoliday(null);
-      form.reset({
-        name: "",
-        date: new Date(),
-        type: "annual",
-        description: "",
-        isRecurring: false,
-        applicableGroups: ["group_a", "group_b"],
-        year: new Date().getFullYear(),
-        isActive: true,
-      });
+      form.reset();
     },
     onError: (error: any) => {
       toast({
@@ -143,10 +112,7 @@ export default function HolidayManagement() {
 
 
   const deleteHolidayMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/holidays/${id}`);
-      return response.json();
-    },
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/holidays/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/holidays"] });
       toast({
