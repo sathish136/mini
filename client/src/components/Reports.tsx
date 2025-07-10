@@ -98,6 +98,16 @@ export default function Reports() {
     enabled: reportType === "monthly-attendance",
   });
 
+  const { data: leaveBalanceData, isLoading: isLeaveBalanceLoading } = useQuery({
+    queryKey: ["/api/leave-balances/report", new Date().getFullYear()],
+    queryFn: async () => {
+      const response = await fetch(`/api/leave-balances/report?year=${new Date().getFullYear()}`);
+      if (!response.ok) throw new Error("Failed to fetch leave balance report");
+      return response.json();
+    },
+    enabled: reportType === "leave-balance",
+  });
+
   const { data: dailyAttendanceData, isLoading: isDailyAttendanceLoading } = useQuery({
     queryKey: ["/api/reports/daily-attendance", startDate, selectedEmployee, selectedGroup],
     queryFn: async () => {
@@ -217,6 +227,10 @@ export default function Reports() {
         data = offerAttendanceData;
         filename = `offer-attendance-${startDate}-to-${endDate}`;
         break;
+      case "leave-balance":
+        data = leaveBalanceData;
+        filename = `leave-balance-report-${new Date().getFullYear()}`;
+        break;
       default:
         return;
     }
@@ -274,7 +288,9 @@ export default function Reports() {
         case 'half-day':
           reportTitle = 'Half Day Report';
           break;
-
+        case 'leave-balance':
+          reportTitle = 'Leave Balance Report';
+          break;
         default:
           reportTitle = 'Attendance Report';
       }
@@ -423,6 +439,10 @@ export default function Reports() {
         case "offer-attendance":
           data = offerAttendanceData;
           filename = `offer-attendance-${startDate}-to-${endDate}`;
+          break;
+        case "leave-balance":
+          data = leaveBalanceData;
+          filename = `leave-balance-report-${new Date().getFullYear()}`;
           break;
         default:
           throw new Error("Unknown report type");
@@ -2338,6 +2358,7 @@ export default function Reports() {
                 <SelectItem value="late-arrival">Late Arrival Report</SelectItem>
                 <SelectItem value="half-day">Half Day Report</SelectItem>
                 <SelectItem value="offer-attendance">1/4 Offer-Attendance Report</SelectItem>
+                <SelectItem value="leave-balance">Leave Balance Report</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -2393,7 +2414,7 @@ export default function Reports() {
               </SelectContent>
             </Select>
           </div>
-          {(reportType === "monthly-attendance" || reportType === "daily-ot" || reportType === "daily-attendance" || reportType === "offer-attendance" || reportType === "late-arrival" || reportType === "half-day") && (
+          {(reportType === "monthly-attendance" || reportType === "daily-ot" || reportType === "daily-attendance" || reportType === "offer-attendance" || reportType === "late-arrival" || reportType === "half-day" || reportType === "leave-balance") && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
               <Select value={selectedGroup} onValueChange={setSelectedGroup}>
@@ -2418,6 +2439,7 @@ export default function Reports() {
       {reportType === "late-arrival" && renderLateArrivalReport()}
       {reportType === "half-day" && renderHalfDayReport()}
       {reportType === "offer-attendance" && renderOfferAttendanceReport()}
+      {reportType === "leave-balance" && renderLeaveBalanceReport()}
 
       {/* Export Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>

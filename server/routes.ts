@@ -3077,10 +3077,10 @@ router.get('/api/leave-balances', async (req, res) => {
     
     const conditions = [];
     if (employeeId) {
-      conditions.push(sql`lb.employee_id = ${employeeId}`);
+      conditions.push(sql`lb.employee_id = ${parseInt(employeeId as string)}`);
     }
     if (year) {
-      conditions.push(sql`lb.year = ${year}`);
+      conditions.push(sql`lb.year = ${parseInt(year as string)}`);
     }
     
     if (conditions.length > 0) {
@@ -3137,7 +3137,7 @@ router.put('/api/leave-balances/:employeeId/:year', async (req, res) => {
         used_days = ${usedDays},
         remaining_days = annual_entitlement - ${usedDays},
         updated_at = now()
-      WHERE employee_id = ${employeeId} AND year = ${year}
+      WHERE employee_id = ${parseInt(employeeId as string)} AND year = ${parseInt(year as string)}
       RETURNING *
     `);
     
@@ -3164,11 +3164,17 @@ router.get('/api/leave-balances/report', async (req, res) => {
         e.employee_group,
         COALESCE(lb.annual_entitlement, 45) as annual_entitlement,
         COALESCE(lb.used_days, 0) as used_days,
-        COALESCE(lb.remaining_days, 45) as remaining_days,
-        ROUND((COALESCE(lb.used_days, 0) * 100.0 / COALESCE(lb.annual_entitlement, 45)), 2) as utilization_percentage
+        COALESCE(lb.remaining_days, 45 - COALESCE(lb.used_days, 0)) as remaining_days,
+        ROUND((COALESCE(lb.used_days, 0) * 100.0 / 45), 2) as utilization_percentage,
+        CASE 
+          WHEN COALESCE(lb.used_days, 0) = 0 THEN 'No Leave Taken'
+          WHEN COALESCE(lb.used_days, 0) <= 10 THEN 'Low Usage'
+          WHEN COALESCE(lb.used_days, 0) <= 30 THEN 'Moderate Usage'
+          ELSE 'High Usage'
+        END as usage_category
       FROM employees e
       JOIN departments d ON e.department_id = d.id
-      LEFT JOIN leave_balances lb ON e.id = lb.employee_id AND lb.year = ${year}
+      LEFT JOIN leave_balances lb ON e.id = lb.employee_id AND lb.year = ${parseInt(year as string)}
       WHERE e.status = 'active'
       ORDER BY e.full_name
     `);
@@ -3180,20 +3186,95 @@ router.get('/api/leave-balances/report', async (req, res) => {
   }
 });
 
-// Leave Balance API Endpoints
-router.get('/api/leave-balances', async (req, res) => {
+// Detailed Leave Balance Calculation API
+router.get('/api/leave-balances/calculate/:employeeId/:year', async (req, res) => {
   try {
-    const { employeeId, year } = req.query;
-    const balances = await storage.getLeaveBalances(
-      employeeId as string, 
-      year ? parseInt(year as string) : undefined
-    );
-    res.json(balances);
+    const { employeeId, year } = req.params;
+    
+    // Get employee information
+    const employeeResult = await db.execute(sql`
+      SELECT e.*, d.name as department_name
+      FROM employees e
+      JOIN departments d ON e.department_id = d.id
+      WHERE e.employee_id = ${employeeId}
+    `);
+    
+    if (employeeResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    
+    const employee = employeeResult.rows[0];
+    
+    // Calculate total leave taken from leave requests
+    const leaveRequestsResult = await db.execute(sql`
+      SELECT 
+        lr.start_date,
+        lr.end_date,
+        lr.total_days,
+        lr.leave_type,
+        lr.status,
+        lr.reason
+      FROM leave_requests lr
+      WHERE lr.employee_id = ${employee.id} 
+        AND EXTRACT(YEAR FROM lr.start_date) = ${parseInt(year as string)}
+        AND lr.status = 'approved'
+      ORDER BY lr.start_date
+    `);
+    
+    const leaveRequests = leaveRequestsResult.rows;
+    const totalLeaveTaken = leaveRequests.reduce((sum, req) => sum + (req.total_days || 0), 0);
+    
+    // Calculate balance
+    const annualEntitlement = 45;
+    const remainingDays = annualEntitlement - totalLeaveTaken;
+    const utilizationPercentage = (totalLeaveTaken / annualEntitlement * 100).toFixed(2);
+    
+    const balanceCalculation = {
+      employee: {
+        id: employee.id,
+        employeeId: employee.employee_id,
+        fullName: employee.full_name,
+        department: employee.department_name,
+        group: employee.employee_group,
+        email: employee.email,
+        joinDate: employee.join_date
+      },
+      leaveBalance: {
+        year: parseInt(year),
+        annualEntitlement,
+        totalLeaveTaken,
+        remainingDays,
+        utilizationPercentage: parseFloat(utilizationPercentage),
+        usageCategory: totalLeaveTaken === 0 ? 'No Leave Taken' :
+                      totalLeaveTaken <= 10 ? 'Low Usage' :
+                      totalLeaveTaken <= 30 ? 'Moderate Usage' : 'High Usage'
+      },
+      leaveHistory: leaveRequests.map(req => ({
+        startDate: req.start_date,
+        endDate: req.end_date,
+        totalDays: req.total_days,
+        leaveType: req.leave_type,
+        reason: req.reason,
+        status: req.status
+      })),
+      calculation: {
+        formula: `${annualEntitlement} - ${totalLeaveTaken} = ${remainingDays}`,
+        details: {
+          annualEntitlement: `${annualEntitlement} days (Standard for all employees)`,
+          totalLeaveTaken: `${totalLeaveTaken} days (From approved leave requests)`,
+          remainingBalance: `${remainingDays} days available`
+        }
+      }
+    };
+    
+    res.json(balanceCalculation);
   } catch (error) {
-    console.error('Failed to fetch leave balances:', error);
-    res.status(500).json({ message: 'Failed to fetch leave balances' });
+    console.error('Failed to calculate leave balance:', error);
+    res.status(500).json({ message: 'Failed to calculate leave balance' });
   }
 });
+
+// Additional Leave Balance API Endpoints using storage layer (kept for compatibility)
 
 router.get('/api/leave-balances/:employeeId/:year', async (req, res) => {
   try {

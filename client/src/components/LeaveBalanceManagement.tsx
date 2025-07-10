@@ -29,6 +29,44 @@ interface LeaveBalance {
   department: string;
   employee_group: string;
   utilization_percentage: number;
+  usage_category?: string;
+}
+
+// Detailed Leave Balance Calculation interface
+interface LeaveBalanceCalculation {
+  employee: {
+    id: number;
+    employeeId: string;
+    fullName: string;
+    department: string;
+    group: string;
+    email: string;
+    joinDate: string;
+  };
+  leaveBalance: {
+    year: number;
+    annualEntitlement: number;
+    totalLeaveTaken: number;
+    remainingDays: number;
+    utilizationPercentage: number;
+    usageCategory: string;
+  };
+  leaveHistory: {
+    startDate: string;
+    endDate: string;
+    totalDays: number;
+    leaveType: string;
+    reason: string;
+    status: string;
+  }[];
+  calculation: {
+    formula: string;
+    details: {
+      annualEntitlement: string;
+      totalLeaveTaken: string;
+      remainingBalance: string;
+    };
+  };
 }
 
 // Leave Balance form schema
@@ -45,6 +83,8 @@ export default function LeaveBalanceManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [editingBalance, setEditingBalance] = useState<LeaveBalance | null>(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -58,6 +98,13 @@ export default function LeaveBalanceManagement() {
   const { data: leaveReport = [], isLoading: isReportLoading } = useQuery({
     queryKey: ['/api/leave-balances/report', selectedYear],
     queryFn: () => apiRequest('GET', `/api/leave-balances/report?year=${selectedYear}`),
+  });
+
+  // Fetch detailed leave balance calculation
+  const { data: leaveCalculation, isLoading: isCalculationLoading } = useQuery({
+    queryKey: ['/api/leave-balances/calculate', selectedEmployeeId, selectedYear],
+    queryFn: () => apiRequest('GET', `/api/leave-balances/calculate/${selectedEmployeeId}/${selectedYear}`),
+    enabled: !!selectedEmployeeId,
   });
 
   // Create/Update leave balance mutation
@@ -127,6 +174,26 @@ export default function LeaveBalanceManagement() {
       year: balance.year,
       usedDays: newUsedDays,
     });
+  };
+
+  const handleViewDetails = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    setIsDetailViewOpen(true);
+  };
+
+  const getUsageCategoryColor = (category: string) => {
+    switch (category) {
+      case 'No Leave Taken':
+        return 'bg-gray-100 text-gray-800';
+      case 'Low Usage':
+        return 'bg-green-100 text-green-800';
+      case 'Moderate Usage':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'High Usage':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   // Calculate summary statistics
@@ -350,15 +417,26 @@ export default function LeaveBalanceManagement() {
                         </span>
                       </td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingBalance(balance)}
-                          className="text-xs"
-                        >
-                          <Edit className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewDetails(balance.employee_id)}
+                            className="text-xs"
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            Details
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingBalance(balance)}
+                            className="text-xs"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -445,6 +523,169 @@ export default function LeaveBalanceManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Detailed Leave Balance View Dialog */}
+      <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <FileText className="mr-2 h-5 w-5" />
+              Detailed Leave Balance Calculation
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive leave balance details and calculation breakdown
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isCalculationLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : leaveCalculation ? (
+            <div className="space-y-6">
+              {/* Employee Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Employee Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Employee ID</p>
+                      <p className="font-medium">{leaveCalculation.employee.employeeId}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Full Name</p>
+                      <p className="font-medium">{leaveCalculation.employee.fullName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Department</p>
+                      <p className="font-medium">{leaveCalculation.employee.department}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Group</p>
+                      <Badge variant={leaveCalculation.employee.group === 'group_a' ? 'default' : 'secondary'}>
+                        {leaveCalculation.employee.group === 'group_a' ? 'Group A' : 'Group B'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Leave Balance Calculation */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Leave Balance Calculation</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Calculation Formula */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-medium text-blue-900 mb-2">Calculation Formula</h4>
+                      <p className="text-lg font-mono bg-white p-2 rounded border">
+                        {leaveCalculation.calculation.formula}
+                      </p>
+                    </div>
+                    
+                    {/* Balance Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-green-700">{leaveCalculation.leaveBalance.annualEntitlement}</div>
+                        <div className="text-sm text-green-600">Annual Entitlement</div>
+                      </div>
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-orange-700">{leaveCalculation.leaveBalance.totalLeaveTaken}</div>
+                        <div className="text-sm text-orange-600">Total Leave Taken</div>
+                      </div>
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div className="text-2xl font-bold text-purple-700">{leaveCalculation.leaveBalance.remainingDays}</div>
+                        <div className="text-sm text-purple-600">Remaining Days</div>
+                      </div>
+                    </div>
+
+                    {/* Usage Statistics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Utilization Percentage</p>
+                        <p className="text-lg font-medium">{leaveCalculation.leaveBalance.utilizationPercentage}%</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Usage Category</p>
+                        <Badge className={getUsageCategoryColor(leaveCalculation.leaveBalance.usageCategory)}>
+                          {leaveCalculation.leaveBalance.usageCategory}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Leave History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Leave History ({leaveCalculation.leaveBalance.year})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {leaveCalculation.leaveHistory.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-200">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">Start Date</th>
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">End Date</th>
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">Days</th>
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">Type</th>
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">Reason</th>
+                            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-medium">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaveCalculation.leaveHistory.map((leave, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                {new Date(leave.startDate).toLocaleDateString()}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                {new Date(leave.endDate).toLocaleDateString()}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium">
+                                {leave.totalDays}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                <Badge variant="outline">{leave.leaveType}</Badge>
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                {leave.reason || 'N/A'}
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm">
+                                <Badge variant={leave.status === 'approved' ? 'default' : 'secondary'}>
+                                  {leave.status}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <CalendarDays className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                      <p className="text-gray-500">No leave records found for {leaveCalculation.leaveBalance.year}</p>
+                      <p className="text-sm text-gray-400">Employee has not taken any approved leave this year.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-gray-500">Unable to load leave balance details</p>
+              <p className="text-sm text-gray-400">Please try again later or contact support.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
