@@ -1,10 +1,1 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
-.env
-/bak
-/uploads
-old
+"node_modules/\nold/\nbackup/\ntemp/\n*.log\n.DS_Store\nThumbs.db"  
