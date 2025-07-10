@@ -344,3 +344,14 @@ Changelog:
     - Created UnifiedLeaveManagement component combining leave deduction and balance management into single interface
     - Added quick action buttons for one-click leave adjustments (+1/-1 days)
     - Improved user experience with cleaner, more intuitive leave management workflow
+  - Automatic Leave Management System Implementation (July 10, 2025):
+    - Removed manual "Process Deduction" button per user request
+    - Updated system to automatically manage leave deductions without manual intervention
+    - Default 45 days leave entitlement (21 Annual + 24 Special holidays) added to database
+    - System automatically calculates: Total Leave (45) - Absent Days = Remaining Leave
+    - Example: If absent 10 days, remaining = 45 - 10 = 35 days automatically
+    - Updated holiday names to simplified format (Annual holiday-1, Special holiday-1, etc.)
+    - Fixed JavaScript errors in AutomaticLeaveDeduction and HolidayManagement components
+    - Enhanced leave management interface to show automatic status updates
+    - Leave balance automatically updates in real-time without manual processing
+    - Government holidays and weekends excluded from automatic deduction calculations

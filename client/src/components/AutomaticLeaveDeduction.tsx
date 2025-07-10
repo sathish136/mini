@@ -86,8 +86,8 @@ export default function AutomaticLeaveDeduction() {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Automatic Leave Deduction</h2>
-          <p className="text-gray-600">Process leave deductions for absent employees</p>
+          <h2 className="text-3xl font-bold text-gray-900">Automatic Leave Management</h2>
+          <p className="text-gray-600">System automatically manages leave deductions for absent employees</p>
         </div>
         <div className="flex items-center gap-2">
           <Input
@@ -109,13 +109,6 @@ export default function AutomaticLeaveDeduction() {
               ))}
             </SelectContent>
           </Select>
-          <Button 
-            onClick={handleProcessLeaveDeduction}
-            disabled={processLeaveDeductionMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {processLeaveDeductionMutation.isPending ? "Processing..." : "Process Deduction"}
-          </Button>
         </div>
       </div>
 
@@ -166,31 +159,31 @@ export default function AutomaticLeaveDeduction() {
         </Card>
       </div>
 
-      {/* Leave Deduction Rules */}
+      {/* Automatic Leave Management Rules */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingDown className="h-5 w-5" />
-            Leave Deduction Rules
+            Automatic Leave Management System
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <Badge variant="outline" className="text-xs">Rule 1</Badge>
-              <p className="text-sm">Employees absent without prior leave application will have 1 day deducted from their annual leave balance.</p>
+              <Badge variant="outline" className="text-xs bg-green-50">Auto</Badge>
+              <p className="text-sm">System automatically deducts leave days when employees are absent without prior leave application.</p>
             </div>
             <div className="flex items-start gap-3">
-              <Badge variant="outline" className="text-xs">Rule 2</Badge>
-              <p className="text-sm">Deduction applies only to employees with remaining leave balance (greater than 0 days).</p>
+              <Badge variant="outline" className="text-xs bg-blue-50">Total</Badge>
+              <p className="text-sm">Each employee gets 45 days annual leave entitlement (21 Annual + 24 Special holidays).</p>
             </div>
             <div className="flex items-start gap-3">
-              <Badge variant="outline" className="text-xs">Rule 3</Badge>
-              <p className="text-sm">Employees who have already applied for leave on the selected date are excluded from deduction.</p>
+              <Badge variant="outline" className="text-xs bg-orange-50">Balance</Badge>
+              <p className="text-sm">Leave balance automatically updates: If absent 10 days, remaining = 45 - 10 = 35 days.</p>
             </div>
             <div className="flex items-start gap-3">
-              <Badge variant="outline" className="text-xs">Rule 4</Badge>
-              <p className="text-sm">Government holidays and weekends are excluded from automatic deduction processing.</p>
+              <Badge variant="outline" className="text-xs bg-purple-50">Exclude</Badge>
+              <p className="text-sm">Government holidays and weekends are excluded from automatic deduction.</p>
             </div>
           </div>
         </CardContent>
@@ -209,7 +202,7 @@ export default function AutomaticLeaveDeduction() {
       {!isAttendanceLoading && (
         <Card>
           <CardHeader>
-            <CardTitle>Processing Summary for {selectedDate}</CardTitle>
+            <CardTitle>Leave Status Summary for {selectedDate}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -226,8 +219,14 @@ export default function AutomaticLeaveDeduction() {
                 <span className="font-medium text-red-600">{absentEmployees}</span>
               </div>
               <div className="flex justify-between">
-                <span>Eligible for Deduction:</span>
+                <span>Auto-Deducted:</span>
                 <span className="font-medium text-orange-600">{Math.min(absentEmployees, eligibleForDeduction)}</span>
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>System Status:</strong> Automatic leave deduction is active. 
+                  Absent employees' leave balances are automatically updated.
+                </p>
               </div>
             </div>
           </CardContent>
