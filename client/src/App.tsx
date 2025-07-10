@@ -17,7 +17,7 @@ import Settings from "@/components/Settings";
 // Renamed from GroupPolicies to HRSettings
 import HRSettings from "@/components/HRSettings";
 import HolidayManagement from "@/components/HolidayManagement";
-import UnifiedLeaveManagement from "@/components/UnifiedLeaveManagement";
+
 import Login from "@/components/Login";
 import UserProfile from "@/components/UserProfile";
 import Notifications from "@/components/Notifications";
@@ -46,7 +46,7 @@ function App() {
               <Route path="/attendance" component={AttendanceTracker} />
               <Route path="/leave" component={AutomaticLeaveDeduction} />
               <Route path="/holidays" component={HolidayManagement} />
-              <Route path="/leave-balance" component={UnifiedLeaveManagement} />
+
               <Route path="/overtime" component={OvertimeManagement} />
               <Route path="/reports" component={Reports} />
               <Route path="/settings" component={Settings} />

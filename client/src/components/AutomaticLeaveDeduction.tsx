@@ -172,7 +172,7 @@ export default function AutomaticLeaveDeduction() {
             </div>
             <div className="flex items-start gap-3">
               <Badge variant="outline" className="text-xs">Rule 2</Badge>
-              <p className="text-sm">Deduction applies only to employees with remaining leave balance (> 0 days).</p>
+              <p className="text-sm">Deduction applies only to employees with remaining leave balance (greater than 0 days).</p>
             </div>
             <div className="flex items-start gap-3">
               <Badge variant="outline" className="text-xs">Rule 3</Badge>
